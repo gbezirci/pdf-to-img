@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF'den PNG'ye Dönüştürücü</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold mb-6 text-center">PDF'den PNG'ye Dönüştürücü</h1>
+        
+        <form action="/convert" method="post" enctype="multipart/form-data" class="space-y-4">
+            <div class="border-dashed border-2 border-gray-300 rounded-lg p-6 text-center">
+                <input type="file" name="pdf_file" accept=".pdf" class="hidden" id="pdf_file">
+                <label for="pdf_file" class="cursor-pointer text-blue-500 hover:text-blue-700">
+                    PDF Dosyası Seç veya Sürükle Bırak
+                </label>
+            </div>
+            
+            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">
+                Dönüştür
+            </button>
+        </form>
+    </div>
+</body>
+</html>
