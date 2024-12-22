@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 from werkzeug.utils import secure_filename
 import os
 from pathlib import Path
 import sys
+from PIL import Image
+import io
 
 # Ana dizini Python path'ine ekle
 sys.path.append(str(Path(__file__).parent.parent))
@@ -46,6 +48,39 @@ def convert():
             return str(e), 500
             
     return 'Geçersiz dosya türü', 400
+
+@app.route('/compress', methods=['POST'])
+def compress_image():
+    try:
+        # İstek parametrelerini al
+        image_path = request.form.get('image_path')
+        quality = int(request.form.get('quality', 50))  # Varsayılan kalite %50
+        
+        if not image_path or not Path(image_path).exists():
+            return jsonify({'error': 'Görsel bulunamadı'}), 404
+
+        # Görseli aç
+        with Image.open(image_path) as img:
+            # Sıkıştırılmış görsel için yeni dosya adı oluştur
+            compressed_path = Path(image_path).parent / f"compressed_{Path(image_path).name}"
+            
+            # Görseli sıkıştır ve kaydet
+            img.save(
+                str(compressed_path),
+                'PNG',
+                optimize=True,
+                quality=quality
+            )
+            
+            return jsonify({
+                'success': True,
+                'compressed_path': str(compressed_path),
+                'original_size': Path(image_path).stat().st_size,
+                'compressed_size': Path(compressed_path).stat().st_size
+            })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/download/<path:filename>')
 def download(filename):

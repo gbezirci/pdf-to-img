@@ -3,6 +3,7 @@
 <head>
     <title>Dönüştürme Sonuçları</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-8">
     <div class="max-w-6xl mx-auto bg-white rounded-lg shadow-lg p-6">
@@ -10,12 +11,47 @@
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for image in images %}
-            <div class="border rounded-lg p-4">
+            <div class="border rounded-lg p-4" id="image-container-{{ loop.index }}">
                 <img src="{{ image }}" alt="Sayfa {{ loop.index }}" class="w-full mb-2">
-                <a href="/download/{{ image }}" 
-                   class="block text-center bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
-                    Sayfa {{ loop.index }}'i İndir
-                </a>
+                <div class="space-y-2">
+                    <!-- İndirme Butonu -->
+                    <a href="/download/{{ image }}" 
+                       class="block text-center bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
+                        Sayfa {{ loop.index }}'i İndir
+                    </a>
+                    
+                    <!-- Sıkıştırma Kontrolleri -->
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Sıkıştırma Kalitesi: <span id="quality-value-{{ loop.index }}">50%</span>
+                        </label>
+                        <input type="range" 
+                               min="1" 
+                               max="100" 
+                               value="50" 
+                               class="w-full"
+                               id="quality-slider-{{ loop.index }}">
+                        <button onclick="compressImage('{{ image }}', {{ loop.index }})"
+                                class="w-full mt-2 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                                id="compress-btn-{{ loop.index }}">
+                            Sıkıştır
+                        </button>
+                        <!-- Sıkıştırma Sonucu -->
+                        <div id="compress-result-{{ loop.index }}" class="mt-2 text-sm hidden">
+                            <div class="text-gray-600">
+                                Orijinal Boyut: <span id="original-size-{{ loop.index }}"></span>
+                            </div>
+                            <div class="text-gray-600">
+                                Sıkıştırılmış Boyut: <span id="compressed-size-{{ loop.index }}"></span>
+                            </div>
+                            <a href="#" 
+                               id="compressed-download-{{ loop.index }}"
+                               class="block text-center bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 mt-2">
+                                Sıkıştırılmış Dosyayı İndir
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -26,5 +62,67 @@
             </a>
         </div>
     </div>
+
+    <script>
+    // Kalite kaydırıcılarını ayarla
+    document.querySelectorAll('input[type="range"]').forEach(slider => {
+        slider.addEventListener('input', function() {
+            const index = this.id.split('-')[2];
+            document.getElementById(`quality-value-${index}`).textContent = this.value + '%';
+        });
+    });
+
+    // Dosya boyutunu formatla
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Görseli sıkıştır
+    function compressImage(imagePath, index) {
+        const quality = document.getElementById(`quality-slider-${index}`).value;
+        const button = document.getElementById(`compress-btn-${index}`);
+        const resultDiv = document.getElementById(`compress-result-${index}`);
+        
+        // Butonu devre dışı bırak ve yazıyı değiştir
+        button.disabled = true;
+        button.textContent = 'Sıkıştırılıyor...';
+        
+        // Sıkıştırma isteği gönder
+        axios.post('/compress', {
+            image_path: imagePath,
+            quality: quality
+        }, {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        })
+        .then(response => {
+            const data = response.data;
+            
+            // Sonuçları göster
+            document.getElementById(`original-size-${index}`).textContent = formatFileSize(data.original_size);
+            document.getElementById(`compressed-size-${index}`).textContent = formatFileSize(data.compressed_size);
+            
+            // İndirme linkini güncelle
+            const downloadLink = document.getElementById(`compressed-download-${index}`);
+            downloadLink.href = `/download/${data.compressed_path}`;
+            
+            // Sonuç bölümünü göster
+            resultDiv.classList.remove('hidden');
+        })
+        .catch(error => {
+            alert('Sıkıştırma sırasında bir hata oluştu: ' + error.response?.data?.error || error.message);
+        })
+        .finally(() => {
+            // Butonu tekrar aktif et
+            button.disabled = false;
+            button.textContent = 'Sıkıştır';
+        });
+    }
+    </script>
 </body>
 </html>
